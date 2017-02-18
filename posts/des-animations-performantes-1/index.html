@@ -1,0 +1,139 @@
+<!doctype html><html lang="fr" data-reactroot="" data-reactid="1" data-react-checksum="-1718019603"><head data-reactid="2"><title data-react-helmet="true">Des animations performantes - Partie 1 | Julien Pradet</title><meta data-react-helmet="true" charset="utf-8"/><meta data-react-helmet="true" http-equiv="X-UA-Compatible" content="IE=edge"/><meta data-react-helmet="true" name="viewport" content="width=device-width, initial-scale=1"/><meta data-react-helmet="true" name="description" content="Faire des animations, c&#x27;est cool. Faire des animations qui ne lag pas, c&#x27;est mieux. Voici la première des trois techniques dont je vais vous parler."/><meta data-react-helmet="true" name="theme-color" content="#00C9C9"/><meta data-react-helmet="true" property="twitter:site" content="@JulienPradet"/><meta data-react-helmet="true" property="twitter:card" content="summary"/><meta data-react-helmet="true" property="twitter:creator" content="@JulienPradet"/><meta data-react-helmet="true" property="twitter:title" content="Des animations performantes - Partie 1"/><meta data-react-helmet="true" property="twitter:description" content="Faire des animations, c&#x27;est cool. Faire des animations qui ne lag pas, c&#x27;est mieux. Voici la première des trois techniques dont je vais vous parler."/><meta data-react-helmet="true" property="twitter:image" content="https://pbs.twimg.com/profile_images/424964348461600768/aygHDGpF.png"/><meta data-react-helmet="true" property="og:site_name" content="Enchanté, Julien Pradet"/><meta data-react-helmet="true" property="og:type" content="page"/><meta data-react-helmet="true" property="og:title" content="Des animations performantes - Partie 1"/><meta data-react-helmet="true" property="og:url" content="https://www.julienpradet.fr/posts/des-animations-performantes-1/"/><meta data-react-helmet="true" property="og:image" content="https://pbs.twimg.com/profile_images/424964348461600768/aygHDGpF.png"/><meta data-react-helmet="true" property="og:description" content="Faire des animations, c&#x27;est cool. Faire des animations qui ne lag pas, c&#x27;est mieux. Voici la première des trois techniques dont je vais vous parler."/><link data-react-helmet="true" rel="canonical" href="https://www.julienpradet.fr/posts/des-animations-performantes-1/"/><link data-react-helmet="true" rel="preload" href="/css/main.css" as="style"/><link data-react-helmet="true" rel="stylesheet" href="/css/main.css"/><link data-react-helmet="true" rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/><link data-react-helmet="true" rel="icon" href="/favicon.ico" type="image/x-icon"/><link data-react-helmet="true" rel="manifest" href="/manifest.json"/></head><body data-reactid="3"><div id="root" data-reactid="4"><div data-reactroot="" data-reactid="1" data-react-checksum="-2081023436"><!-- react-empty: 2 --><!-- react-empty: 3 --><!-- react-empty: 4 --><!-- react-empty: 5 --><div class="page" data-reactid="6"><script data-reactid="7">window.location.href = "https://www.julienpradet.fr/posts/des-animations-performantes-1/"</script><!-- react-empty: 8 --><div data-reactid="9"><div class="page-header" data-reactid="10"><h1 data-reactid="11"><a href="/" data-reactid="12">Des animations performantes - Partie 1</a></h1><header data-reactid="13"><time data-reactid="14">Friday, February 17, 2017</time></header></div><div class="info" data-reactid="15"><!-- react-text: 16 -->Attention, j&#x27;ai changé d&#x27;hébergement. Ca se passe maintenant sur <!-- /react-text --><a href="https://www.julienpradet.fr" data-reactid="17">https://www.julienpradet.fr</a><!-- react-text: 18 -->. :)<!-- /react-text --><div style="margin-top:0.5em;" data-reactid="19"><a href="https://www.julienpradet.fr/posts/des-animations-performantes-1/" data-reactid="20">Accéder à l&#x27;article sur le nouvel hébergement.</a></div></div><div class="page-content" data-reactid="21"><div data-reactid="22"><div data-reactid="23"><p>Faire bouger sa page web, c'est mettre des paillettes dans les yeux de ses utilisateurs.</p>
+<p>Le hic, c'est que ce n'est pas facile à faire. Souvent, on se retrouve avec des maquettes qui mettent l'eau à la bouche et on les massacre à l'intégration. En général, parti de ce constat, il ne reste plus que deux possibilités : soit on décide que c'est la faute du graphiste, soit on cherche et propose des solutions.</p>
+<p>Cela dit, c'est un sujet très vaste, qui mériterait bien plus que quelques articles. Je vais donc l'aborder par petits bouts. Cette première série dédiée au sujet parlera des performances.</p>
+<p>Celle-ci sera découpée en trois parties :</p>
+<ol>
+<li><a href="/posts/des-animations-performantes-1">Animer les bonnes propriétés CSS</a> (Vous êtes ici.)</li>
+<li>Préparer le navigateur aux animations</li>
+<li>Faire les choses dans le bon ordre en JS</li>
+</ol>
+<p>Ces trois parties seront assez théoriques et expliqueront qu'est ce qu'il faut éviter et pourquoi. Il faudra attendre la deuxième série sur les animations pour parler d'implémentations concrètes.</p>
+</div><div data-reactid="24"><h2 id="tldr"><a class="header-anchor" href="#tldr" aria-hidden="true">#</a> TL;DR</h2>
+<p>Essayez de n'utiliser que les propriétés CSS qui ne changent pas la taille réelle des éléments. Celles qui vous éviteront un maximum de problèmes sont :</p>
+<ul>
+<li><code>transform</code></li>
+<li><code>opacity</code></li>
+</ul>
+<p>Le but de cet article va être de comprendre pourquoi en examinant le fonctionnement des navigateurs.</p>
+</div><div data-reactid="25"><h2 id="comment-faire-des-animations-en-css"><a class="header-anchor" href="#comment-faire-des-animations-en-css" aria-hidden="true">#</a> Comment faire des animations en CSS ?</h2>
+<p>Il existe deux types d'animations en CSS :</p>
+<ul>
+<li><code>transition</code> : une propriété CSS a changé, et le navigateur fait en sorte que le passage de l'ancienne propriété à la nouvelle soit fluide</li>
+<li><code>animation</code> : une propriété CSS change plusieurs fois au cours d'un même mouvement (via des <code>keyframes</code>), et le navigateur fait en sorte de rendre le tout fluide. Ces animations peuvent être répétées plusieurs fois si nécessaire.</li>
+</ul>
+<p>Tout le contenu de cette série sera valable quelque soit le type d'animation choisi.</p>
+<p>Je ne développerai pas sur l'usage de  ces propriétés dans cet article. Cependant, pour que ce soit plus concret pour ceux d'entre vous qui n'ont jamais vu d'animations CSS, voici à quoi ressemble une <code>transition</code> :</p>
+</div><div class="hover-button__wrapper" data-reactid="26"><style data-reactid="27">
+      .hover-button__wrapper {
+        text-align: center;
+      }
+      .hover-button {
+        transition: transform 0.3s ease, background 0.3s ease;
+        background: #00c9c9;
+        color: white;
+        padding: 0.5em 2em;
+        display: inline-block;
+        text-align: center;
+        font-size: 1.3em;
+        font-weight: bold;
+        border: 0;
+      }
+      .hover-button:hover, .hover-button:focus {
+        transform: scale(1.2);
+        background: #19e4e4;
+      }
+    </style><button class="hover-button" data-reactid="28">Hover me!</button></div><div data-reactid="29"><p>Pour faire cette transition lors du hover, j'ai utilisé le CSS suivant :</p>
+</div><div class="code-tab" data-reactid="30"><ul class="code-tab__list" data-reactid="31"><li data-reactid="32"><button class="code-tab__button active" data-reactid="33">Simplifié</button></li><li data-reactid="34"><button class="code-tab__button " data-reactid="35">Complet</button></li></ul><pre class="language-jsx" data-reactid="36"><code data-reactid="37"><span class="token selector">button</span> <span class="token punctuation">{</span>
+  <span class="token property">transition</span><span class="token punctuation">:</span> transform 0.3s ease<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token selector">button:hover, button:focus</span> <span class="token punctuation">{</span>
+  <span class="token property">transform</span><span class="token punctuation">:</span> <span class="token function">scale</span><span class="token punctuation">(</span>1.2<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre></div><div data-reactid="38"><p>Dans la propriété <code>transition</code>, je définis la <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/transition-property">propriété</a> qui est animable (<code>transform</code>), la <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/transition-duration">durée</a> de transition (<code>0.3s</code>) et le <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/transition-timing-function">timing</a> de votre transition (<code>ease</code>). Vous pouvez aussi <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/transition-delay">retarder</a> une transition en ajoutant une nouvelle durée après le timing.</p>
+</div><div data-reactid="39"><h2 id="mais-mes-animations-sont-lentes"><a class="header-anchor" href="#mais-mes-animations-sont-lentes" aria-hidden="true">#</a> Mais mes animations sont lentes !</h2>
+<p>Hé, oui ! Même si le navigateur fait beaucoup de choses intelligentes à votre place, il ne peut pas tout faire parfaitement. Et quand on sait qu'on n'a que 16.67 millième de secondes pour faire une étape de l'animation et atteindre les 60fps... on se dit qu'il y a du boulot !</p>
+<p>Pour rendre vos animations rapides, il va falloir se mettre à la place du navigateur pour comprendre ce qui ne va pas.</p>
+<h2 id="comment-fonctionne-un-navigateur-web"><a class="header-anchor" href="#comment-fonctionne-un-navigateur-web" aria-hidden="true">#</a> Comment fonctionne un navigateur web ?</h2>
+<p>Pour afficher une page, un navigateur web doit passer par plusieurs étapes.</p>
+<ol>
+<li>
+<p>Tout d'abord, quand votre page arrive, elle est en <em>HTML</em>. Le navigateur doit la parser pour la transformer en des objets avec lesquels il peut travailler. Ainsi, pour chaque balise HTML est créé un élément du <em>DOM</em> (<em>Document Object Model</em>). (Ce sont ces éléments du DOM qui sont mis à disposition en JavaScript.)</p>
+</li>
+<li>
+<p>Place au <em>CSS</em>. Le navigateur va parser les feuilles de style et les transformer en <em>Style Rules</em>. Le but est de faire en sorte que, lors de la prochaine étape, il soit rapide de déterminer quelles propriétés CSS s'appliquent à chaque élément du DOM.</p>
+</li>
+<li>
+<p>Maintenant que le navigateur connaît le contenu et qu'il sait quelles règles de style appliquer, le navigateur combine les deux et construit un nouvel arbre qu'on appelle le <em>Render Tree</em> ou <em>Render Application</em>. A partir de celui-ci, toutes les informations sont disponibles pour faire le rendu de l'application. Cependant, pour l'instant, si on devait représenter cet arbre sur une page, tous les éléments seraient en haut à gauche.</p>
+</li>
+<li>
+<p>Pour les placer au bon endroit, on passe à l'étape du <em>Layout</em> (ou <em>Reflow</em>). Cette étape consiste à déterminer comment agencer les éléments les uns par rapport aux autres. C'est cette étape à laquelle je vais m'intéresser dans cet article.</p>
+</li>
+<li>
+<p>Et enfin, le navigateur passe à l'étape du <em>Painting</em> qui sert à afficher votre page sur votre navigateur.</p>
+</li>
+</ol>
+<p>Pour résumer le tout en un seul diagramme, cela devrait ressembler à ça :</p>
+<figure tabindex="0">
+<img src="/images/posts/des-animations-performantes/browser-flow.png" alt="Schéma représentant les 5 étapes sus-citées">
+<figcaption>Fonctionnement de Webkit (<a href="https://www.html5rocks.com/en/tutorials/internals/howbrowserswork/#Main_flow_examples">source</a>)</figcaption>
+</figure>
+</div><div data-reactid="40"><h2 id="pourquoi-sinteresser-plus-particulierement-au-layout"><a class="header-anchor" href="#pourquoi-sinteresser-plus-particulierement-au-layout" aria-hidden="true">#</a> Pourquoi s'intéresser plus particulièrement au Layout ?</h2>
+<p>Parce que c'est une étape très couteuse qui peut être optimisée voire même évitée. Il nous restera donc beaucoup plus de temps pour faire le reste.</p>
+<h3 id="pourquoi-couteuse"><a class="header-anchor" href="#pourquoi-couteuse" aria-hidden="true">#</a> Pourquoi couteuse ?</h3>
+<h4 id="en-theorie"><a class="header-anchor" href="#en-theorie" aria-hidden="true">#</a> En théorie</h4>
+<p>Si vous vous souvenez de ce que j'ai dit, le <em>Layout</em> est l'étape qui permet de dire comment et où va être placé chacun de vos éléments sur la page.</p>
+<p>Pour faire cette opération, le navigateur va prendre les balises de la page une par une et va les positionner. Pour ce faire, sur chaque balise, il a besoin de savoir :</p>
+<ul>
+<li>quelle place est disponible dans l'élément parent</li>
+<li>combien de place est nécessaire pour s'afficher</li>
+</ul>
+<h4 id="en-pratique"><a class="header-anchor" href="#en-pratique" aria-hidden="true">#</a> En pratique</h4>
+<p>Sur un exemple concret, qu'est ce que ça donne ?</p>
+</div><div class="code-tab" data-reactid="41"><ul class="code-tab__list" data-reactid="42"><li data-reactid="43"><button class="code-tab__button active" data-reactid="44">HTML</button></li><li data-reactid="45"><button class="code-tab__button " data-reactid="46">CSS</button></li></ul><pre class="language-jsx" data-reactid="47"><code data-reactid="48"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>body</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>nav</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>h1</span><span class="token punctuation">></span></span>Titre<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>h1</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>ul</span><span class="token punctuation">></span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>li</span><span class="token punctuation">></span></span>Menu 1<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>li</span><span class="token punctuation">></span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>li</span><span class="token punctuation">></span></span>Menu 2<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>li</span><span class="token punctuation">></span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>li</span><span class="token punctuation">></span></span>Menu 3<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>li</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>ul</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>nav</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>main</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>h2</span><span class="token punctuation">></span></span>Ma page<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>h2</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>p</span><span class="token punctuation">></span></span>Lorem ipsum dolor sit amet<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>p</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>main</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>body</span><span class="token punctuation">></span></span>
+</code></pre></div><div data-reactid="49"><p>Ici, l'étape de <em>Layout</em> va commencer par représenter la balise <code>nav</code>.</p>
+<p>Il calcule donc la position du titre et celui-ci se positionne à gauche et prend le moins de place possible (<code>float: left</code>).</p>
+<p>Une fois que le titre a été positionné, place au menu. Il essaye alors de caler le maximum d'éléments du menu sur une même ligne (<code>display: inline-block</code>), à droite du titre. S'il n'y arrive pas, il fait plusieurs lignes. Et si ce n'est toujours pas possible, la liste passe sous le titre.</p>
+<p>Le positionnement de la navigation est fini et le navigateur peut passer à la suite en positionnant de la même façon le <code>main</code> qui sera en dessous du <code>nav</code>.</p>
+<h4 id="dans-le-cadre-dune-animation"><a class="header-anchor" href="#dans-le-cadre-dune-animation" aria-hidden="true">#</a> Dans le cadre d'une animation</h4>
+<p>Maintenant, imaginons que vous changiez la taille de votre titre au survol.</p>
+<pre class="language-css"><code><span class="token selector">h1:hover</span> <span class="token punctuation">{</span> <span class="token property">font-size</span><span class="token punctuation">:</span> 2em<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+</code></pre>
+<p>Cela veut dire que la taille que va prendre le titre va doubler. Mais cela veut aussi dire qu'il reste moins de place pour la liste du menu, et donc qu'elle va potentiellement passer sur plusieurs lignes et prendre plus de place en hauteur. Et si la navigation prend plus de place, le reste de la page va aussi descendre et donc a besoin d'être recalculé. Bref, il a besoin de tout recalculer à partir de la seule balise qui a changé de style.</p>
+<p>En soit, qu'il recalcule tout n'est pas très grave parce que à l'échelle de l'utilisateur ce n'est pas très long. Par contre, si ce changement est animé, cela veut dire que chaque nouvel affichage prendra plus longtemps, et donc que l'animation sera ralentie, voire <em>moche</em>.</p>
+<h3 id="comment-loptimiser"><a class="header-anchor" href="#comment-loptimiser" aria-hidden="true">#</a> Comment l'optimiser ?</h3>
+<p>Pour éviter d'avoir à tout recalculer à chaque fois, on va essayer de ne plus changer le <em>Layout</em> à chaque étape de l'animation. C'est possible parce que certaines propriétés ne changent pas le <em>flow</em> de la page.</p>
+<p>C'est valable notamment pour toutes les propriétés qui affectent les couleurs (dont <code>opacity</code>), mais aussi pour la propriété <code>transform</code> étant donné que celle-ci n'a pas d'impact sur le reste des éléments.</p>
+<h3 id="comment-savoir-si-la-propriete-est-bonne-ou-mauvaise"><a class="header-anchor" href="#comment-savoir-si-la-propriete-est-bonne-ou-mauvaise" aria-hidden="true">#</a> Comment savoir si la propriété est bonne ou mauvaise ?</h3>
+<p>Pour le constater par vous même, vous pouvez ouvrir vos DevTools dans votre navigateur préféré et aller dans l'onglet permettant d'inspecter les performances de votre application (<em>Timeline</em> sur Chrome&amp;Co, <em>Performance</em> sur Firefox). Une fois sur l'onglet, il vous faut enregistrer une séquence pendant laquelle vous lancerez manuellement votre animation.</p>
+<figure tabindex="0">
+<img src="/images/posts/des-animations-performantes/layout.png" alt="Timeline Google Chrome avec du Layout" />
+<figcaption>Voici à quoi ressemble la Timeline enregistrée via Chrome</figcaption>
+</figure>
+<p>Et ce qui va vous intéresser, c'est la partie violette (commun à tous les DevTools) où il y a écrit <em>Layout</em>. Si elle est présente tout au long de votre animation, c'est que votre animation est couteuse. Et, bien que cela puisse s'afficher correctement dans votre navigateur, pensez aux mobiles qui auront du mal à suivre le rythme !</p>
+<p>Il est important de faire le test sur plusieurs navigateurs car l'animation peut être rapide sur l'un et lente sur l'autre.</p>
+<p>Vous pouvez aussi regarder sur <a href="https://csstriggers.com/">CSS Triggers</a>. Mais méfiez vous de ce qu'il vous dit car je suis tombé sur quelques incohérences par rapport à ce que j'ai constaté dans les DevTools.</p>
+<h2 id="conclusion"><a class="header-anchor" href="#conclusion" aria-hidden="true">#</a> Conclusion</h2>
+<p>Voilà, vous savez maintenant comment bien choisir vos propriétés CSS et surtout comment éviter celles qui vous pourriront vos animations.</p>
+<p>Le seul problème, c'est que ce n'est pas évident de penser de cette façon quand on débute. Mais avec un peu d'imagination, c'est tout à fait possible de n'animer qu'en utilisant ces propriétés. Si vous êtes impatients vous pouvez déjà vous intéresser à la technique <a href="https://aerotwist.com/blog/flip-your-animations/">FLIP</a> présentée par <a href="https://twitter.com/aerotwist">@aerotwist</a>. Sinon, vous pouvez attendre ma nouvelle série d'articles sur le sujet dans 3-4 semaines. :)</p>
+<p>La semaine prochaine, toujours sur les performances, nous verrons qu'il est possible d'optimiser aussi les phases de <code>Painting</code>. Alors à très vite :)</p>
+<hr>
+<p>En attendant, voici quelques sources pour vous permettre d'approfondir le sujet :</p>
+<ul>
+<li><a href="https://www.html5rocks.com/en/tutorials/internals/howbrowserswork/#Main_flow_examples">How Browsers Work</a></li>
+<li><a href="https://blog.gyrosco.pe/smooth-css-animations-7d8ffc2c1d29#.5nmo6c7wj">10 principles for smooth web animations</a></li>
+<li><a href="https://aerotwist.com/blog/flip-your-animations/">FLIP Your Animations</a></li>
+</ul>
+</div></div><hr data-reactid="50"/><div data-reactid="51"><footer class="page-footer" data-reactid="52"><!-- react-text: 53 -->Si vous voulez suivre mes publications, il paraît que j&#x27;ai un feed <!-- /react-text --><a href="/feed.xml" data-reactid="54">RSS</a><!-- react-text: 55 --> et un <!-- /react-text --><a href="https://twitter.com/JulienPradet" data-reactid="56">Twitter</a><!-- react-text: 57 -->.<!-- /react-text --><br data-reactid="58"/><!-- react-text: 59 -->Si vous pensez à d&#x27;autres méthodes que vous voudriez que je mette en place (pigeon voyageur, avion en papier, etc.), n&#x27;hésitez pas à me les proposer :)<!-- /react-text --></footer><hr data-reactid="60"/></div><div data-reactid="61"><h2 data-reactid="62">Les derniers articles</h2><ul class="page-list" data-reactid="63"><li class="page-list__item" data-reactid="64"><div class="page-preview" data-reactid="65"><a class="page-preview__title" href="/posts/des-animations-performantes-1" data-reactid="66">Des animations performantes - Partie 1</a><div class="page-preview__meta" data-reactid="67"><time data-reactid="68">Friday, February 17, 2017</time></div><div class="page-preview__description" data-reactid="69"><!-- react-text: 70 -->Faire des animations, c&#x27;est cool. Faire des animations qui ne lag pas, c&#x27;est mieux. Voici la première des trois techniques dont je vais vous parler.<!-- /react-text --><!-- react-text: 71 --> <!-- /react-text --></div><div class="page-preview__read-more" data-reactid="72"><a href="/posts/des-animations-performantes-1" data-reactid="73">Lire la suite →</a></div></div></li><li class="page-list__item" data-reactid="74"><div class="page-preview" data-reactid="75"><a class="page-preview__title" href="/posts/react-router-v4" data-reactid="76">React Router V4</a><div class="page-preview__meta" data-reactid="77"><time data-reactid="78">Friday, February 3, 2017</time></div><div class="page-preview__description" data-reactid="79"><!-- react-text: 80 -->La librairie la moins concurrencée de l&#x27;écosystème React se refond. Cette fois elle embrasse totalement l&#x27;esprit React. Pourquoi c&#x27;est cool ?<!-- /react-text --><!-- react-text: 81 --> <!-- /react-text --></div><div class="page-preview__read-more" data-reactid="82"><a href="/posts/react-router-v4" data-reactid="83">Lire la suite →</a></div></div></li></ul></div><a href="/" data-reactid="84">Revenir à la page d&#x27;accueil</a></div></div><footer class="footer" data-reactid="85"><ul data-reactid="86"><li data-reactid="87"><a href="https://twitter.com/JulienPradet" data-reactid="88"><span class="SVGInline SVGInline--cleaned" data-reactid="89"><svg class="SVGInline-svg SVGInline--cleaned-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M24 4.557a9.83 9.83 0 0 1-2.828.775 4.932 4.932 0 0 0 2.165-2.724 9.864 9.864 0 0 1-3.127 1.195 4.916 4.916 0 0 0-3.594-1.555c-3.18 0-5.515 2.966-4.797 6.045A13.978 13.978 0 0 1 1.67 3.15a4.93 4.93 0 0 0 1.524 6.573 4.903 4.903 0 0 1-2.23-.616c-.053 2.28 1.582 4.415 3.95 4.89a4.935 4.935 0 0 1-2.224.084 4.928 4.928 0 0 0 4.6 3.42A9.9 9.9 0 0 1 0 19.54a13.94 13.94 0 0 0 7.548 2.212c9.142 0 14.307-7.72 13.995-14.646A10.025 10.025 0 0 0 24 4.556z"/></svg></span><span class="name" data-reactid="90">@JulienPradet</span></a></li><li data-reactid="91"><a href="https://github.com/JulienPradet/blog-posts" data-reactid="92"><span class="SVGInline SVGInline--cleaned" data-reactid="93"><svg class="SVGInline-svg SVGInline--cleaned-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.6.11.793-.26.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.73.083-.73 1.205.085 1.84 1.238 1.84 1.238 1.07 1.834 2.806 1.304 3.49.997.108-.776.42-1.306.763-1.605-2.665-.305-5.467-1.334-5.467-5.93 0-1.312.47-2.382 1.236-3.222-.125-.303-.536-1.524.116-3.176 0 0 1.008-.322 3.3 1.23A11.51 11.51 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.236 1.91 1.236 3.22 0 4.61-2.807 5.625-5.48 5.922.43.372.824 1.102.824 2.222v3.293c0 .32.192.694.8.576C20.567 21.796 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg></span><span class="name" data-reactid="94">JulienPradet</span></a></li></ul></footer></div><!-- react-empty: 95 --><!-- react-empty: 96 --><!-- react-empty: 97 --></div></div><script data-reactid="5">__REACT_ASYNC_COMPONENTS_STATE__ = {"resolved":{"1":true}}</script><script defer="" src="../../app.7bed6fc368b67c6b70dd.js" data-reactid="6"></script></body></html>

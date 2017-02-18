@@ -1,0 +1,304 @@
+<!doctype html><html lang="fr" data-reactroot="" data-reactid="1" data-react-checksum="-533025972"><head data-reactid="2"><title data-react-helmet="true">Les contextes sans les problèmes en React - Partie 2 | Julien Pradet</title><meta data-react-helmet="true" charset="utf-8"/><meta data-react-helmet="true" http-equiv="X-UA-Compatible" content="IE=edge"/><meta data-react-helmet="true" name="viewport" content="width=device-width, initial-scale=1"/><meta data-react-helmet="true" name="description" content="Nous avons vu dans le post de la semaine dernière que les contextes pouvaient poser des problèmes de mise à jour des composants. Comment peut-on les contourner ?"/><meta data-react-helmet="true" name="theme-color" content="#00C9C9"/><meta data-react-helmet="true" property="twitter:site" content="@JulienPradet"/><meta data-react-helmet="true" property="twitter:card" content="summary"/><meta data-react-helmet="true" property="twitter:creator" content="@JulienPradet"/><meta data-react-helmet="true" property="twitter:title" content="Les contextes sans les problèmes en React - Partie 2"/><meta data-react-helmet="true" property="twitter:description" content="Nous avons vu dans le post de la semaine dernière que les contextes pouvaient poser des problèmes de mise à jour des composants. Comment peut-on les contourner ?"/><meta data-react-helmet="true" property="twitter:image" content="https://pbs.twimg.com/profile_images/424964348461600768/aygHDGpF.png"/><meta data-react-helmet="true" property="og:site_name" content="Enchanté, Julien Pradet"/><meta data-react-helmet="true" property="og:type" content="page"/><meta data-react-helmet="true" property="og:title" content="Les contextes sans les problèmes en React - Partie 2"/><meta data-react-helmet="true" property="og:url" content="https://www.julienpradet.fr/posts/Les-contextes-sans-les-problemes-en-react-2/"/><meta data-react-helmet="true" property="og:image" content="https://pbs.twimg.com/profile_images/424964348461600768/aygHDGpF.png"/><meta data-react-helmet="true" property="og:description" content="Nous avons vu dans le post de la semaine dernière que les contextes pouvaient poser des problèmes de mise à jour des composants. Comment peut-on les contourner ?"/><link data-react-helmet="true" rel="canonical" href="https://www.julienpradet.fr/posts/Les-contextes-sans-les-problemes-en-react-2/"/><link data-react-helmet="true" rel="preload" href="/css/main.css" as="style"/><link data-react-helmet="true" rel="stylesheet" href="/css/main.css"/><link data-react-helmet="true" rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/><link data-react-helmet="true" rel="icon" href="/favicon.ico" type="image/x-icon"/><link data-react-helmet="true" rel="manifest" href="/manifest.json"/></head><body data-reactid="3"><div id="root" data-reactid="4"><div data-reactroot="" data-reactid="1" data-react-checksum="-1740930040"><!-- react-empty: 2 --><div class="page" data-reactid="3"><script data-reactid="4">window.location.href = "https://www.julienpradet.fr/posts/Les-contextes-sans-les-problemes-en-react-2/"</script><!-- react-empty: 5 --><div data-reactid="6"><div class="page-header" data-reactid="7"><h1 data-reactid="8"><a href="/" data-reactid="9">Les contextes sans les problèmes en React - Partie 2</a></h1><header data-reactid="10"><time data-reactid="11">Friday, January 20, 2017</time></header></div><div class="info" data-reactid="12"><!-- react-text: 13 -->Attention, j&#x27;ai changé d&#x27;hébergement. Ca se passe maintenant sur <!-- /react-text --><a href="https://www.julienpradet.fr" data-reactid="14">https://www.julienpradet.fr</a><!-- react-text: 15 -->. :)<!-- /react-text --><div style="margin-top:0.5em;" data-reactid="16"><a href="https://www.julienpradet.fr/posts/Les-contextes-sans-les-problemes-en-react-2/" data-reactid="17">Accéder à l&#x27;article sur le nouvel hébergement.</a></div></div><div class="page-content" data-reactid="18"><div data-reactid="19"><div data-reactid="20"><p>Cet article fait suite à <a href="/posts/Les-contextes-sans-les-problemes-en-react/">celui de la semaine dernière</a>.
+Dans ce dernier, nous avons vu comment éviter de noyer nos composants React avec des milliers de propriétés en tirant partie des contextes qui sont une fonctionnalité native de React. Nous nous sommes aussi préparés aux futurs <em>breaking changes</em>, étant donné que les contextes sont une fonctionnalité dite <em>expérimentale</em>.</p>
+<p>Pour cela on a créé deux types de composants :</p>
+<ul>
+<li>les <code>Providers</code> qui injectent un contexte dans leur arbre de composant</li>
+<li>les <code>Subscribers</code> qui redonnent accès à un contexte aux enfants.</li>
+</ul>
+<p>Ils nous restait cependant un dernier problèmes à régler : comment être sûr que les changements dans le contexte sont propagés à tous les enfants ?</p>
+<p>Attention tout de même : cette problématique n'est véritablement pertinente que lorsque les données mises à disposition par le contexte sont amenées à changer dans le temps.</p>
+<p>L'exemple que l'on va prendre dans cet article est un service d'authentification. C'est un objet qui nous permet de savoir à tout moment le nom de l'utilisateur connecté et qui met à dispositions deux méthodes pour se connecter et se déconnecter.</p>
+<h2 id="rappel-du-probleme"><a class="header-anchor" href="#rappel-du-probleme" aria-hidden="true">#</a> Rappel du problème</h2>
+<p>Avant d'attaquer la solution, pourquoi est-ce que certains enfants ne sont pas mis à jour ?</p>
+<p>Pour répondre à cette question, nous avons besoin de savoir d'où viennent les mises à jour d'un composant. En React, il n'y a que trois possibilités :</p>
+<ul>
+<li>Le parent du composant a fait un nouveau rendu</li>
+<li>Le composant a mis à jour son état (<code>setState</code>)</li>
+<li>Le composant a forcé sa mise à jour (<code>forceUpdate</code>)</li>
+</ul>
+<p>Le contexte venant d'un <a href="https://youtu.be/ZnYNmsY3n1w?t=6s">arrière-arrière-(...)-arrière-grand-parent</a> du composant, la mise à jour ne peut pas venir de lui même. La seule solution est donc que le parent du composant ait fait un nouveau rendu.</p>
+<p>Cependant, l'idée du contexte étant que seuls ceux qui en ont besoin y ont accès, cela veut dire que le parent n'a vraisemblablement pas accès à ce contexte. Et donc, s'il n'a pas accès à ce contexte, il y a de fortes chances qu'il fasse des optimisations (via <code>shouldComponentUpdate</code>) qui prennent uniquement en compte ses propres propriétés et son propre état. Ainsi, malgré une mise à jour du <code>Provider</code>, la mise à jour du <code>Subscriber</code> peut être interrompue par ce parent.</p>
+<p>Et le pire dans tout ça, c'est que cette situation se présentera plus souvent que vous ne le pensez ! En effet, les librairies React complexes ont besoin d'assurer un certain niveau de service en faisant appel au <code>shouldComponentUpdate</code> (ex : <a href="https://github.com/reactjs/react-redux">React Redux</a>, <a href="https://github.com/facebook/relay">Relay</a>, etc.). D'ailleurs, vous même risquez de mettre en place ce dispositif dans un de vos composants à l'avenir.</p>
+<h2 id="principe-de-la-solution"><a class="header-anchor" href="#principe-de-la-solution" aria-hidden="true">#</a> Principe de la solution</h2>
+<p>On sait donc qu'on ne peut pas espérer que le rendu vienne d'en haut. On va donc contourner le problème en se disant que ce sera l'enfant (<code>Subscriber</code>) qui sera responsable de se mettre à jour.</p>
+<p>Ainsi, lorsqu'il y aura besoin d'une mise à jour on fera appel à <code>forceUpdate</code> dans le <code>Subscriber</code> pour reprendre la chaîne de rendu. La raison pour laquelle ici je vais privilégier <code>forceUpdate</code> plutôt que <code>setState</code> est parce que cela simplifie l'écriture du composant. Cependant, si vous cherchez à faire des optimisations, le mieux est d'utiliser le <code>setState</code> en y mettant uniquement les données dont a besoin votre composant. Cela vous permettra d'utiliser le <code>shouldComponentUpdate</code> sciemment.</p>
+<p>Il ne reste donc plus qu'à savoir quand les données changent pour qu'on déclenche le <code>forceUpdate</code>. Or le seul qui sait quand les données ont changé est le service qu'on met à disposition dans notre contexte. Le rôle du <code>Subscriber</code> va donc être de demander gentiment d'être prévenu à chaque fois qu'une mise à jour a été faite (<code>subscribe</code>) pour pouvoir se mettre à jour au bon moment. Ainsi, à chaque changement, le service n'a plus qu'à récupérer tous ceux qui se sont enregistrés et les prévenir (<code>notify</code>). Ce pattern est appelé le <a href="https://en.wikipedia.org/wiki/Observer_pattern"><em>Pattern Observer</em></a>.</p>
+<p>Si on récapitule la liste des étapes cela va donc donner :</p>
+<ol>
+<li>Mise à disposition du service via un <code>Provider</code></li>
+<li>Création d'un <code>Subscriber</code></li>
+<li>Enregistrement du <code>Subscriber</code> dans le service</li>
+<li>Modification des données du service</li>
+<li>Notification envoyée à tous les <code>Subscribers</code></li>
+<li>Mise à jour du <code>Subscriber</code> et du composant enfant</li>
+</ol>
+<p>Une fois que vous serez venu à bout de l'implémentation, ça peut être un bon exercice que de revenir à cette liste pour être sûr que vous visualisez bien chaque étape.</p>
+<h2 id="implementation-de-la-solution"><a class="header-anchor" href="#implementation-de-la-solution" aria-hidden="true">#</a> Implémentation de la solution</h2>
+<p>Nous allons donc l'implémenter en prenant comme exemple le service d'authentification dont je vous ai parlé dans l'intro. Dans l'ordre il va donc falloir faire le service qui peut notifier des changements, réutiliser le format du <code>Provider</code> de l'article de la semaine dernière, puis transformer le <code>Subscriber</code> pour qu'il incorpore la logique de mise à jour.</p>
+<h3 id="creation-du-modele-decouter"><a class="header-anchor" href="#creation-du-modele-decouter" aria-hidden="true">#</a> Création du modèle d'écouter</h3>
+<p>Tout d'abord, on va créer un utilitaire qui permet de prévenir ceux qui s'y enregistrent lorsque la sonnette est tirée. Il faut donc pouvoir s'y enregistrer, se désinscrire, et prévenir qu'il y a de nouvelles données.</p>
+<p>Il y aurait plusieurs solutions telles qu'un <a href="https://github.com/asyncly/EventEmitter2">EventEmitter</a> ou un stream <a href="https://github.com/ReactiveX/RxJS">rxjs</a>. Mais pour éviter d'introduire trop de magie à la fois, on va se contenter de JS pur.</p>
+<p>Je n'utilise ici ni class, ni prototype pour rendre la lecture la plus linéaire possible. Mais n'hésitez pas à l'implémenter de la façon qui vous sied le mieux ! Après tout, le but de cette méthode est d'alléger l'effort cognitif à fournir.</p>
+<pre class="language-jsx"><code><span class="token keyword">function</span> Subscription <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment" spellcheck="true">// Stockage des gens à prévenir en cas de</span>
+  <span class="token comment" spellcheck="true">// mise à jour</span>
+  <span class="token keyword">var</span> listeners <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+
+  <span class="token keyword">return</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// Initialiser une écoute</span>
+    subscribe<span class="token punctuation">:</span> <span class="token keyword">function</span> subscribe <span class="token punctuation">(</span>listener<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment" spellcheck="true">// On ajoute le listeners à la liste</span>
+      <span class="token comment" spellcheck="true">// des gens enregistrés</span>
+      listeners<span class="token punctuation">.</span><span class="token function">push</span><span class="token punctuation">(</span>listener<span class="token punctuation">)</span>
+
+      <span class="token comment" spellcheck="true">// On renvoie une méthode</span>
+      <span class="token comment" spellcheck="true">// qui met fin à une écoute</span>
+      <span class="token keyword">return</span> <span class="token keyword">function</span> unsubscribe <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment" spellcheck="true">// On enlève le listener de la liste</span>
+        <span class="token comment" spellcheck="true">// des gens enregistrés</span>
+        listeners <span class="token operator">=</span> listeners<span class="token punctuation">.</span><span class="token function">filter</span><span class="token punctuation">(</span>
+          <span class="token keyword">function</span> <span class="token punctuation">(</span>item<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">return</span> item <span class="token operator">!==</span> listener
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token comment" spellcheck="true">// Prévenir tout le monde d'un changement</span>
+    notify<span class="token punctuation">:</span> <span class="token keyword">function</span> notify <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment" spellcheck="true">// On execute chaque listener qui est</span>
+      <span class="token comment" spellcheck="true">// un callback qui sera executé dans le</span>
+      <span class="token comment" spellcheck="true">// scope du Subscriber</span>
+      listeners<span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span>
+        <span class="token keyword">function</span> <span class="token punctuation">(</span>listener<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token function">listener</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h4 id="exemple-dutilisation"><a class="header-anchor" href="#exemple-dutilisation" aria-hidden="true">#</a> Exemple d'utilisation :</h4>
+<pre class="language-jsx"><code><span class="token keyword">var</span> subscription <span class="token operator">=</span> <span class="token function">Subscription</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">var</span> unsubscribe <span class="token operator">=</span> subscription<span class="token punctuation">.</span><span class="token function">subscribe</span><span class="token punctuation">(</span>
+  <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">"Updated!"</span><span class="token punctuation">)</span> <span class="token punctuation">}</span>
+<span class="token punctuation">)</span>
+subscription<span class="token punctuation">.</span><span class="token function">notify</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token function">unsubscribe</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<h3 id="creation-du-service-dauthentification"><a class="header-anchor" href="#creation-du-service-dauthentification" aria-hidden="true">#</a> Création du service d'authentification</h3>
+<p>Le service est aussi du javascript pur. Ce qu'il est important de ne pas oublier, c'est qu'à chaque changement des données, il faut notifier tous ceux qui écoutent les changements via la <code>subscription</code>.</p>
+<pre class="language-jsx"><code><span class="token keyword">function</span> UserService <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment" spellcheck="true">// Initialisation de l'utilitaire d'écoute</span>
+  <span class="token keyword">var</span> subscription <span class="token operator">=</span> <span class="token function">Subscription</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+  <span class="token comment" spellcheck="true">// Initialisation des données</span>
+  <span class="token keyword">var</span> user <span class="token operator">=</span> <span class="token keyword">null</span>
+
+  <span class="token keyword">return</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// Méthode de login du user</span>
+    <span class="token comment" spellcheck="true">// La méthode peut être appelée depuis</span>
+    <span class="token comment" spellcheck="true">// n'importe où.</span>
+    login<span class="token punctuation">:</span> <span class="token keyword">function</span> login <span class="token punctuation">(</span>login<span class="token punctuation">,</span> password<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment" spellcheck="true">// Login sans validation du password :D</span>
+      user <span class="token operator">=</span> <span class="token punctuation">{</span> name<span class="token punctuation">:</span> login <span class="token punctuation">}</span>
+
+      <span class="token comment" spellcheck="true">// On prévient tout le monde du changement</span>
+      subscription<span class="token punctuation">.</span><span class="token function">notify</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+
+    <span class="token comment" spellcheck="true">// Idem pour la déconnexion</span>
+    logout<span class="token punctuation">:</span> <span class="token keyword">function</span> logout <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      user <span class="token operator">=</span> <span class="token keyword">null</span>
+      subscription<span class="token punctuation">.</span><span class="token function">notify</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+
+    <span class="token comment" spellcheck="true">// Exposition de l'utilisateur connecté</span>
+    <span class="token comment" spellcheck="true">// Si c'est null, il est anonyme</span>
+    getUser<span class="token punctuation">:</span> <span class="token keyword">function</span> getUser <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">return</span> user
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+
+    <span class="token comment" spellcheck="true">// Exposition de la méthode d'écoute pour</span>
+    <span class="token comment" spellcheck="true">// que les enfants puissent l'appeler</span>
+    subscribe<span class="token punctuation">:</span> subscription<span class="token punctuation">.</span>subscribe
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h4 id="exemple-dutilisation-2"><a class="header-anchor" href="#exemple-dutilisation-2" aria-hidden="true">#</a> Exemple d'utilisation :</h4>
+<pre class="language-jsx"><code><span class="token keyword">var</span> userService <span class="token operator">=</span> <span class="token function">UserService</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">var</span> unsubscribe <span class="token operator">=</span> userService<span class="token punctuation">.</span><span class="token function">subscribe</span><span class="token punctuation">(</span>
+  <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span>
+      <span class="token string">"New user "</span><span class="token punctuation">,</span>
+      userService<span class="token punctuation">.</span><span class="token function">getUser</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">)</span>
+userService<span class="token punctuation">.</span><span class="token function">login</span><span class="token punctuation">(</span><span class="token string">'Julien'</span><span class="token punctuation">,</span> <span class="token string">'TopSecret'</span><span class="token punctuation">)</span>
+userService<span class="token punctuation">.</span><span class="token function">logout</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token function">unsubscribe</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<h3 id="mise-a-disposition-du-service-via-un-provider"><a class="header-anchor" href="#mise-a-disposition-du-service-via-un-provider" aria-hidden="true">#</a> Mise à disposition du service via un Provider</h3>
+<p>Maintenant que le service existe, on va le mettre à disposition via notre <code>Provider</code>.</p>
+<pre class="language-jsx"><code><span class="token keyword">class</span> <span class="token class-name">UserServiceProvider</span> <span class="token keyword">extends</span> <span class="token class-name">React<span class="token punctuation">.</span>Component</span> <span class="token punctuation">{</span>
+  getChildContext <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token punctuation">{</span>
+      userService<span class="token punctuation">:</span> <span class="token keyword">this</span><span class="token punctuation">.</span>props<span class="token punctuation">.</span>userService
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+
+  render <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> React<span class="token punctuation">.</span>Children<span class="token punctuation">.</span><span class="token function">only</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>props<span class="token punctuation">.</span>children<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment" spellcheck="true">// Dans ce composant, `subscribe` n'est pas utile.</span>
+<span class="token comment" spellcheck="true">// Il ne l'est que pour les `Subscribers`. Cependant,</span>
+<span class="token comment" spellcheck="true">// en le remontant ici, les warnings React nous</span>
+<span class="token comment" spellcheck="true">// avertiront au plus tôt.</span>
+<span class="token keyword">const</span> userServiceType <span class="token operator">=</span> <span class="token punctuation">{</span>
+  userService<span class="token punctuation">:</span> React<span class="token punctuation">.</span>PropTypes<span class="token punctuation">.</span><span class="token function">shape</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+    subscribe<span class="token punctuation">:</span> React<span class="token punctuation">.</span>PropTypes<span class="token punctuation">.</span>func<span class="token punctuation">.</span>isRequired
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span>isRequired
+<span class="token punctuation">}</span>
+
+UserServiceProvider<span class="token punctuation">.</span>childContextTypes <span class="token operator">=</span> userServiceType
+
+UserServiceProvider<span class="token punctuation">.</span>propTypes <span class="token operator">=</span> userServiceType
+</code></pre>
+<h4 id="exemple-dutilisation-3"><a class="header-anchor" href="#exemple-dutilisation-3" aria-hidden="true">#</a> Exemple d'utilisation :</h4>
+<pre class="language-jsx"><code><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>UserServiceProvider</span> <span class="token attr-name">userService</span><span class="token script language-javascript"><span class="token punctuation">=</span><span class="token punctuation">{</span>userService<span class="token punctuation">}</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>div</span><span class="token punctuation">></span></span>
+    Le contexte avec le service est accessible ici<span class="token punctuation">.</span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>div</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>UserServiceProvider</span><span class="token punctuation">></span></span>
+</code></pre>
+<h3 id="creation-dun-subscriber"><a class="header-anchor" href="#creation-dun-subscriber" aria-hidden="true">#</a> Création d'un subscriber</h3>
+<p>Maintenant qu'on peut accéder au service, on va pouvoir s'y enregistrer. On va donc créer un <code>Subscriber</code> qui lors de la création du composant va s'enregistrer au service et sera responsable de mettre à jour l'état du composant lorsqu'il est notifié.</p>
+<pre class="language-jsx"><code><span class="token keyword">class</span> <span class="token class-name">UserServiceSubscriber</span> <span class="token keyword">extends</span> <span class="token class-name">React<span class="token punctuation">.</span>Component</span> <span class="token punctuation">{</span>
+  componentWillMount <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// Dès que le composant est initialisé, on</span>
+    <span class="token comment" spellcheck="true">// commence l'écoute du service</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span>unsubscribe <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span>context
+      <span class="token punctuation">.</span>userService
+      <span class="token punctuation">.</span><span class="token function">subscribe</span><span class="token punctuation">(</span>
+        <span class="token comment" spellcheck="true">// On oublie pas de bind le this</span>
+        <span class="token comment" spellcheck="true">// sinon le forceUpdate ne va pas</span>
+        <span class="token comment" spellcheck="true">// fonctionner</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>forceUpdate<span class="token punctuation">.</span><span class="token function">bind</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">)</span>
+      <span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+
+  componentWillUnmount <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// Attention, il est important de ne pas</span>
+    <span class="token comment" spellcheck="true">// oublier de se désinscrire. Si vous ne</span>
+    <span class="token comment" spellcheck="true">// le faites pas, vous créerez une fuite</span>
+    <span class="token comment" spellcheck="true">// mémoire. De plus React vous criera</span>
+    <span class="token comment" spellcheck="true">// dessus en prévenant qu'il n'est pas</span>
+    <span class="token comment" spellcheck="true">// possible d'appeler `forceUpdate` sur</span>
+    <span class="token comment" spellcheck="true">// un composant qui n'est plus sur la</span>
+    <span class="token comment" spellcheck="true">// page.</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">unsubscribe</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+
+  render <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// On réutilise le pattern `Function as</span>
+    <span class="token comment" spellcheck="true">// Children` pour mettre à disposition</span>
+    <span class="token comment" spellcheck="true">// le service</span>
+    <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span>props<span class="token punctuation">.</span><span class="token function">children</span><span class="token punctuation">(</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span>context<span class="token punctuation">.</span>userService
+    <span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+UserServiceSubscriber<span class="token punctuation">.</span>contextTypes <span class="token operator">=</span> userServiceType
+
+UserServiceSubscriber<span class="token punctuation">.</span>propTypes <span class="token operator">=</span> <span class="token punctuation">{</span>
+  children<span class="token punctuation">:</span> React<span class="token punctuation">.</span>PropTypes<span class="token punctuation">.</span>func<span class="token punctuation">.</span>isRequired
+<span class="token punctuation">}</span>
+</code></pre>
+<h4 id="exemple-dutilisation-4"><a class="header-anchor" href="#exemple-dutilisation-4" aria-hidden="true">#</a> Exemple d'utilisation :</h4>
+<pre class="language-jsx"><code><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>UserServiceProvider</span> <span class="token attr-name">userService</span><span class="token script language-javascript"><span class="token punctuation">=</span><span class="token punctuation">{</span>userService<span class="token punctuation">}</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>UserServiceSubscriber</span><span class="token punctuation">></span></span>
+    <span class="token punctuation">{</span><span class="token keyword">function</span> <span class="token punctuation">(</span>service<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">return</span> <span class="token punctuation">(</span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>div</span><span class="token punctuation">></span></span>
+          Accès au <span class="token template-string"><span class="token string">`service`</span></span> ici<span class="token punctuation">.</span>
+          Le rendu se fait directement ici plutôt
+          que dans le composant
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>div</span><span class="token punctuation">></span></span>
+      <span class="token punctuation">)</span>
+    <span class="token punctuation">}</span><span class="token punctuation">}</span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>UserServiceSubscriber</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>UserServiceProvider</span><span class="token punctuation">></span></span>
+</code></pre>
+<h3 id="utilisation-finale"><a class="header-anchor" href="#utilisation-finale" aria-hidden="true">#</a> Utilisation finale</h3>
+<p>Si on omet le code pour rédiger le <code>service</code>, le <code>Provider</code> et le <code>Subscriber</code>, cela donne donc ça :</p>
+<pre class="language-jsx"><code><span class="token comment" spellcheck="true">// Création du service à injecter</span>
+<span class="token keyword">var</span> userService <span class="token operator">=</span> <span class="token function">UserService</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment" spellcheck="true">// Composant permettant de se connecter/déconnecter</span>
+<span class="token keyword">function</span> Logger <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">return</span> <span class="token punctuation">(</span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>UserServiceSubscriber</span><span class="token punctuation">></span></span>
+      <span class="token punctuation">{</span><span class="token keyword">function</span> <span class="token punctuation">(</span>service<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token punctuation">(</span>
+          <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>button</span>
+            <span class="token attr-name">onClick</span><span class="token script language-javascript"><span class="token punctuation">=</span><span class="token punctuation">{</span><span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+              service<span class="token punctuation">.</span><span class="token function">getUser</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                <span class="token operator">?</span> service<span class="token punctuation">.</span><span class="token function">logout</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                <span class="token punctuation">:</span> service<span class="token punctuation">.</span><span class="token function">login</span><span class="token punctuation">(</span><span class="token string">'Julien'</span><span class="token punctuation">,</span> <span class="token string">'xxx'</span><span class="token punctuation">)</span>
+            <span class="token punctuation">}</span><span class="token punctuation">}</span></span>
+          <span class="token punctuation">></span></span>
+            <span class="token punctuation">{</span>service<span class="token punctuation">.</span><span class="token function">getUser</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+              <span class="token operator">?</span> <span class="token string">'Se déconnecter'</span>
+              <span class="token punctuation">:</span> <span class="token string">'Se connecter'</span><span class="token punctuation">}</span>
+          <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>button</span><span class="token punctuation">></span></span>
+        <span class="token punctuation">)</span>
+      <span class="token punctuation">}</span><span class="token punctuation">}</span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>UserServiceSubscriber</span><span class="token punctuation">></span></span>
+  <span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment" spellcheck="true">// Composant affichant l'utilisateur connecté</span>
+<span class="token keyword">function</span> LoggedUser <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">return</span> <span class="token punctuation">(</span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>UserServiceSubscriber</span><span class="token punctuation">></span></span>
+      <span class="token punctuation">{</span><span class="token keyword">function</span> <span class="token punctuation">(</span>service<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> <span class="token punctuation">(</span>
+          <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>div</span><span class="token punctuation">></span></span>
+            <span class="token punctuation">{</span>service<span class="token punctuation">.</span><span class="token function">getUser</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">?</span> service<span class="token punctuation">.</span><span class="token function">getUser</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>name <span class="token punctuation">:</span> <span class="token string">'Anonyme'</span><span class="token punctuation">}</span>
+          <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>div</span><span class="token punctuation">></span></span>
+        <span class="token punctuation">)</span>
+      <span class="token punctuation">}</span><span class="token punctuation">}</span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>UserServiceSubscriber</span><span class="token punctuation">></span></span>
+  <span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment" spellcheck="true">// Rendu global</span>
+ReactDOM<span class="token punctuation">.</span><span class="token function">render</span><span class="token punctuation">(</span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>UserServiceProvider</span> <span class="token attr-name">userService</span><span class="token script language-javascript"><span class="token punctuation">=</span><span class="token punctuation">{</span>userService<span class="token punctuation">}</span></span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>div</span><span class="token punctuation">></span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>Logger</span> <span class="token punctuation">/></span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>LoggedUser</span> <span class="token punctuation">/></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>div</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>UserServiceProvider</span><span class="token punctuation">></span></span><span class="token punctuation">,</span>
+  document<span class="token punctuation">.</span><span class="token function">getElementById</span><span class="token punctuation">(</span><span class="token string">'root'</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+</code></pre>
+<h2 id="cest-tout"><a class="header-anchor" href="#cest-tout" aria-hidden="true">#</a> C'est tout !</h2>
+<p><a href="http://jsfiddle.net/pz62orpv/2/">Demo time !</a></p>
+<p>Le résultat final n'est peut-être pas aussi élégant que du Redux, mais cela permet de retrouver des objets qui sont peut être plus familiers tout en extrayant la logique métier.</p>
+<p>Quand vous aurez écrit tout ça pour un ou deux autres services, vous vous rendrez compte que vous pouvez généraliser la création des <code>Providers</code> et <code>Subscribers</code>. En faisant cela, finalement, vous n'aurez quasiment plus qu'à écrire le service pour pouvoir l'utiliser dans votre code.</p>
+<p>C'est une méthode qui peut aussi être très pratique si vous avez besoin de faire des helpers pour des UIs. Ce sera d'ailleurs peut être le sujet d'un autre article. :)</p>
+<p>Le piège est en tout cas est de se dire que les contextes suffisent en oubliant les complications induites par les optimisations que propose React.</p>
+<p>Si vous pensez que l'idée est stupide, géniale ou si certains points ne sont pas clairs, n'hésitez pas à m'en faire part. Je serai ravi d'échanger avec vous :)</p>
+<hr>
+<p>Sources complémentaires :</p>
+<ul>
+<li><a href="https://facebook.github.io/react/docs/context.html">React Context</a></li>
+<li><a href="https://medium.com/@mweststrate/how-to-safely-use-react-context-b7e343eff076#.hae0gg9tk">How to safely use React context</a></li>
+<li><a href="https://github.com/ReactTraining/react-broadcast">React Broadcast</a></li>
+<li><a href="https://github.com/ReactTraining/react-broadcast">Function as Children</a></li>
+</ul>
+</div></div><hr data-reactid="21"/><div data-reactid="22"><footer class="page-footer" data-reactid="23"><!-- react-text: 24 -->Si vous voulez suivre mes publications, il paraît que j&#x27;ai un feed <!-- /react-text --><a href="/feed.xml" data-reactid="25">RSS</a><!-- react-text: 26 --> et un <!-- /react-text --><a href="https://twitter.com/JulienPradet" data-reactid="27">Twitter</a><!-- react-text: 28 -->.<!-- /react-text --><br data-reactid="29"/><!-- react-text: 30 -->Si vous pensez à d&#x27;autres méthodes que vous voudriez que je mette en place (pigeon voyageur, avion en papier, etc.), n&#x27;hésitez pas à me les proposer :)<!-- /react-text --></footer><hr data-reactid="31"/></div><div data-reactid="32"><h2 data-reactid="33">Les derniers articles</h2><ul class="page-list" data-reactid="34"><li class="page-list__item" data-reactid="35"><div class="page-preview" data-reactid="36"><a class="page-preview__title" href="/posts/des-animations-performantes-1" data-reactid="37">Des animations performantes - Partie 1</a><div class="page-preview__meta" data-reactid="38"><time data-reactid="39">Friday, February 17, 2017</time></div><div class="page-preview__description" data-reactid="40"><!-- react-text: 41 -->Faire des animations, c&#x27;est cool. Faire des animations qui ne lag pas, c&#x27;est mieux. Voici la première des trois techniques dont je vais vous parler.<!-- /react-text --><!-- react-text: 42 --> <!-- /react-text --></div><div class="page-preview__read-more" data-reactid="43"><a href="/posts/des-animations-performantes-1" data-reactid="44">Lire la suite →</a></div></div></li><li class="page-list__item" data-reactid="45"><div class="page-preview" data-reactid="46"><a class="page-preview__title" href="/posts/react-router-v4" data-reactid="47">React Router V4</a><div class="page-preview__meta" data-reactid="48"><time data-reactid="49">Friday, February 3, 2017</time></div><div class="page-preview__description" data-reactid="50"><!-- react-text: 51 -->La librairie la moins concurrencée de l&#x27;écosystème React se refond. Cette fois elle embrasse totalement l&#x27;esprit React. Pourquoi c&#x27;est cool ?<!-- /react-text --><!-- react-text: 52 --> <!-- /react-text --></div><div class="page-preview__read-more" data-reactid="53"><a href="/posts/react-router-v4" data-reactid="54">Lire la suite →</a></div></div></li></ul></div><a href="/" data-reactid="55">Revenir à la page d&#x27;accueil</a></div></div><footer class="footer" data-reactid="56"><ul data-reactid="57"><li data-reactid="58"><a href="https://twitter.com/JulienPradet" data-reactid="59"><span class="SVGInline SVGInline--cleaned" data-reactid="60"><svg class="SVGInline-svg SVGInline--cleaned-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M24 4.557a9.83 9.83 0 0 1-2.828.775 4.932 4.932 0 0 0 2.165-2.724 9.864 9.864 0 0 1-3.127 1.195 4.916 4.916 0 0 0-3.594-1.555c-3.18 0-5.515 2.966-4.797 6.045A13.978 13.978 0 0 1 1.67 3.15a4.93 4.93 0 0 0 1.524 6.573 4.903 4.903 0 0 1-2.23-.616c-.053 2.28 1.582 4.415 3.95 4.89a4.935 4.935 0 0 1-2.224.084 4.928 4.928 0 0 0 4.6 3.42A9.9 9.9 0 0 1 0 19.54a13.94 13.94 0 0 0 7.548 2.212c9.142 0 14.307-7.72 13.995-14.646A10.025 10.025 0 0 0 24 4.556z"/></svg></span><span class="name" data-reactid="61">@JulienPradet</span></a></li><li data-reactid="62"><a href="https://github.com/JulienPradet/blog-posts" data-reactid="63"><span class="SVGInline SVGInline--cleaned" data-reactid="64"><svg class="SVGInline-svg SVGInline--cleaned-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.6.11.793-.26.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.73.083-.73 1.205.085 1.84 1.238 1.84 1.238 1.07 1.834 2.806 1.304 3.49.997.108-.776.42-1.306.763-1.605-2.665-.305-5.467-1.334-5.467-5.93 0-1.312.47-2.382 1.236-3.222-.125-.303-.536-1.524.116-3.176 0 0 1.008-.322 3.3 1.23A11.51 11.51 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.236 1.91 1.236 3.22 0 4.61-2.807 5.625-5.48 5.922.43.372.824 1.102.824 2.222v3.293c0 .32.192.694.8.576C20.567 21.796 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg></span><span class="name" data-reactid="65">JulienPradet</span></a></li></ul></footer></div><!-- react-empty: 66 --><!-- react-empty: 67 --><!-- react-empty: 68 --><!-- react-empty: 69 --><!-- react-empty: 70 --><!-- react-empty: 71 --></div></div><script data-reactid="5">__REACT_ASYNC_COMPONENTS_STATE__ = {"resolved":{"1":true}}</script><script defer="" src="../../app.7bed6fc368b67c6b70dd.js" data-reactid="6"></script></body></html>
